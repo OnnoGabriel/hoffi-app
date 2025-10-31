@@ -1,0 +1,293 @@
+index.html
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Mobile Kamera + OCR Demo</title>
+    <style>
+      body {
+        font-family: system-ui, Arial;
+        padding: 12px;
+      }
+      video {
+        width: 100%;
+        max-height: 40vh;
+        background: #000;
+      }
+      #controls {
+        margin-top: 8px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 8px 12px;
+      }
+      textarea {
+        width: 100%;
+        height: 150px;
+        margin-top: 8px;
+      }
+    
+      #order-number {
+        display: inline-block;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Kamera → Texterkennung (Demo)</h1>
+    <video id="video" autoplay playsinline></video>
+    <div id="controls">
+      <button id="start">Start Kamera</button>
+      <button id="stop" disabled>Stop</button>
+      <button id="ocr-snap" disabled>Photo Texterkennung</button>
+      <label
+        ><input type="checkbox" id="live-ocr" /> Video Texterkennung (alle
+        1.5s)</label
+      >
+      <button id="toggle-torch">Blitzlicht an/aus</button>
+    </div>
+
+    <textarea
+      id="result"
+      placeholder="Erkannter Text erscheint hier..."
+    ></textarea>
+
+  
+    <input type="text" id="order-number" readonly></input> (zuletzt erkannte Nummer)
+   
+
+    <!-- Fallback: Tesseract.js (nur laden wenn gebraucht). CDN-URL kann angepasst werden -->
+    <script>
+      const video = document.getElementById("video");
+      const startBtn = document.getElementById("start");
+      const stopBtn = document.getElementById("stop");
+      const snapBtn = document.getElementById("ocr-snap");
+      const resultEl = document.getElementById("result");
+      const orderNumberEl = document.getElementById("order-number");
+      const liveCheckbox = document.getElementById("live-ocr");
+      const torchBtn = document.getElementById("toggle-torch");
+
+      let stream = null;
+      let track = null;
+      let liveInterval = null;
+      let usingTextDetector = false;
+      let textDetector = null;
+      let tesseractLoaded = false;
+      let tesseractWorker = null;
+
+      // kleines Canvas zum Capturen
+      const offCanvas = document.createElement("canvas");
+      const offCtx = offCanvas.getContext("2d");
+
+      async function startCamera() {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { exact: "environment" },
+              width: { ideal: 1280 },
+            },
+            audio: false,
+          });
+        } catch (err) {
+          // Fallback, manche Geräte akzeptieren exact nicht
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment", width: { ideal: 1280 } },
+            audio: false,
+          });
+        }
+        video.srcObject = stream;
+        track = stream.getVideoTracks()[0];
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        snapBtn.disabled = false;
+
+        // Prüfen, ob TextDetector verfügbar ist
+        if ("TextDetector" in window) {
+          try {
+            textDetector = new TextDetector();
+            usingTextDetector = true;
+            console.log("TextDetector verfügbar — benutze native API");
+          } catch (e) {
+            usingTextDetector = false;
+          }
+        } else {
+          usingTextDetector = false;
+        }
+      }
+
+      function stopCamera() {
+        if (stream) {
+          stream.getTracks().forEach((t) => t.stop());
+          stream = null;
+          track = null;
+        }
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        snapBtn.disabled = true;
+        clearInterval(liveInterval);
+        liveInterval = null;
+        liveCheckbox.checked = false;
+      }
+
+      // Capture helper: skaliere Bild für OCR (z.B. 1024 px breit max)
+      function captureFrame() {
+        if (!video.videoWidth || !video.videoHeight)
+          throw new Error("Video noch nicht bereit");
+        const maxWidth = 1024;
+        const scale = Math.min(1, maxWidth / video.videoWidth);
+        offCanvas.width = Math.round(video.videoWidth * scale);
+        offCanvas.height = Math.round(video.videoHeight * scale);
+        offCtx.drawImage(video, 0, 0, offCanvas.width, offCanvas.height);
+        return offCanvas;
+      }
+
+      // native TextDetector (schnell, wenn unterstützt)
+      async function runTextDetector(canvas) {
+        try {
+          // detect akzeptiert HTMLCanvasElement
+          const boxes = await textDetector.detect(canvas);
+          // boxes: Array mit boundingBox und rawValue
+          const texts = boxes
+            .map((b) => b.rawValue)
+            .filter(Boolean)
+            .join("\n");
+          return texts || "[keine Texte gefunden]";
+        } catch (e) {
+          console.warn("TextDetector-Fehler", e);
+          return null;
+        }
+      }
+
+      // Tesseract fallback
+      async function ensureTesseract() {
+        if (tesseractLoaded) return;
+        // dynamisch laden, damit Seite nicht unnötig groß ist
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src =
+            "https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js";
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+        // Erzeuge Worker (langsamer initial load)
+        // In Tesseract.js v4: createWorker muss korrekt initialisiert werden
+        tesseractWorker = await Tesseract.createWorker({
+          logger: (m) => {
+            // optional: m.status, m.progress
+            // console.log(m);
+          },
+        });
+        await tesseractWorker.loadLanguage("deu");
+        await tesseractWorker.initialize("deu");
+        tesseractLoaded = true;
+      }
+
+      async function runTesseract(canvas) {
+        await ensureTesseract();
+        // Tesseract erwartet ein Bild-Element oder Daten-URL
+        const dataUrl = canvas.toDataURL("image/png");
+        const {
+          data: { text },
+        } = await tesseractWorker.recognize(dataUrl);
+        return text;
+      }
+
+      async function doOCR() {
+        if (!video || !track) return;
+        try {
+          const canvas = captureFrame();
+
+          // Zuerst native versuchen
+          if (usingTextDetector && textDetector) {
+            const text = await runTextDetector(canvas);
+            if (text) {
+              analyzeText(text);
+              return;
+            }
+          }
+
+          // Fallback Tesseract
+          resultEl.value = "OCR läuft (Tesseract) — bitte warten...";
+          const text = await runTesseract(canvas);
+          if (text) {
+            analyzeText(text);
+          
+          }
+          else {
+            resultEl.value =  "[kein Text gefunden]";
+          }
+        } catch (e) {
+          console.error(e);
+          resultEl.value = "Fehler bei OCR: " + (e.message || e);
+        }
+      }
+
+      function analyzeText(text) {
+        resultEl.value = text;
+
+        text.split("\n").forEach((line) => {
+          if (line.includes("KD-Auftrag:")) {
+            const foo = line.split("KD-Auftrag:")[1].trim();
+            const parts = foo.split(" ");
+            // get part with number that ends with a character
+            const orderNumber = parts.find((part) => part.match(/\d+\D/));
+            if (orderNumber) {
+              orderNumberEl.value = orderNumber;
+            }
+          }
+        });
+
+      }
+
+      // Live OCR throttled
+      function startLiveOCR() {
+        if (liveInterval) return;
+        liveInterval = setInterval(() => {
+          // keine Überlappungen erlauben
+          if (!video || video.readyState < 2) return;
+          doOCR().catch(console.error);
+        }, 1500); // alle 1.5s
+      }
+      function stopLiveOCR() {
+        clearInterval(liveInterval);
+        liveInterval = null;
+      }
+
+      // Torch (sofern unterstützt)
+      async function toggleTorch() {
+        if (!track) return alert("Kamera nicht gestartet");
+        const cap = track.getCapabilities ? track.getCapabilities() : {};
+        if (!cap.torch)
+          return alert("Torch wird vom Gerät/Browser nicht unterstützt");
+        const settings = track.getSettings();
+        const isOn = settings.torch === true;
+        try {
+          await track.applyConstraints({ advanced: [{ torch: !isOn }] });
+        } catch (e) {
+          console.warn("Torch-Fehler", e);
+          alert("Torch konnte nicht umgeschaltet werden: " + e.message);
+        }
+      }
+
+      // Events
+      startBtn.addEventListener("click", () => startCamera());
+      stopBtn.addEventListener("click", () => stopCamera());
+      snapBtn.addEventListener("click", () => doOCR());
+      liveCheckbox.addEventListener("change", () => {
+        if (liveCheckbox.checked) startLiveOCR();
+        else stopLiveOCR();
+      });
+      torchBtn.addEventListener("click", () => toggleTorch());
+      // Aufräumen beim Verlassen
+      window.addEventListener("beforeunload", () => {
+        stopCamera();
+        if (tesseractWorker) tesseractWorker.terminate();
+      });
+    </script>
+  </body>
+</html>
