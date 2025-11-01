@@ -1,102 +1,168 @@
 <template>
   <v-card elevation="2">
     <v-card-title class="bg-primary text-white">
-      <v-icon start>mdi-camera-iris</v-icon>
-      Kamera → Texterkennung (Demo)
+      <v-icon start>mdi-barcode-scan</v-icon>
+      KD-Nummer erfassen
     </v-card-title>
 
     <v-card-text class="pa-4">
-      <!-- Video Element -->
-      <div class="video-container mb-4">
-        <video
-          ref="videoRef"
-          autoplay
-          playsinline
-          class="video-element"
-        ></video>
-      </div>
+      <!-- Tab Navigation -->
+      <v-tabs v-model="activeTab" class="mb-4" bg-color="primary" grow>
+        <v-tab value="scan">
+          <v-icon start>mdi-camera</v-icon>
+          Scannen
+        </v-tab>
+        <v-tab value="manual">
+          <v-icon start>mdi-keyboard</v-icon>
+          Manuell
+        </v-tab>
+      </v-tabs>
 
-      <!-- Control Buttons -->
-      <v-row dense class="mb-4">
-        <v-col cols="12" sm="6" md="3">
+      <!-- Scan Tab -->
+      <v-window v-model="activeTab">
+        <v-window-item value="scan">
+          <!-- Video Element -->
+          <div class="video-container mb-4">
+            <video
+              ref="videoRef"
+              autoplay
+              playsinline
+              class="video-element"
+            ></video>
+          </div>
+
+          <!-- Control Buttons -->
+          <v-row dense class="mb-4">
+            <v-col cols="12" sm="6">
+              <v-btn
+                block
+                size="large"
+                color="success"
+                :disabled="cameraActive"
+                @click="startCamera"
+                prepend-icon="mdi-camera"
+              >
+                Start Kamera
+              </v-btn>
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-btn
+                block
+                size="large"
+                color="error"
+                :disabled="!cameraActive"
+                @click="stopCamera"
+                prepend-icon="mdi-stop"
+              >
+                Stop
+              </v-btn>
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-btn
+                block
+                size="large"
+                color="primary"
+                :disabled="!cameraActive"
+                :loading="ocrProcessing"
+                @click="doOCR"
+                prepend-icon="mdi-camera-burst"
+              >
+                Photo Texterkennung
+              </v-btn>
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-btn
+                block
+                size="large"
+                color="warning"
+                :disabled="!cameraActive"
+                @click="toggleTorch"
+                prepend-icon="mdi-flashlight"
+              >
+                Blitzlicht an/aus
+              </v-btn>
+            </v-col>
+          </v-row>
+
+          <!-- Live OCR Toggle -->
+          <v-row dense class="mb-4">
+            <v-col cols="12">
+              <v-switch
+                v-model="liveOcrEnabled"
+                color="primary"
+                label="Video Texterkennung (alle 1.5s)"
+                :disabled="!cameraActive"
+                hide-details
+              ></v-switch>
+            </v-col>
+          </v-row>
+
+          <!-- OCR Result Text Area -->
+          <v-textarea
+            v-model="recognizedText"
+            label="Erkannter Text"
+            placeholder="Erkannter Text erscheint hier..."
+            rows="6"
+            readonly
+            variant="outlined"
+            class="mb-4"
+          ></v-textarea>
+        </v-window-item>
+
+        <!-- Manual Entry Tab -->
+        <v-window-item value="manual">
+          <v-alert type="info" variant="tonal" class="mb-4">
+            Geben Sie die KD-Nummer manuell ein, wenn der Scan nicht funktioniert.
+          </v-alert>
+
+          <v-text-field
+            v-model="manualKdNummer"
+            label="KD-Nummer manuell eingeben"
+            placeholder="z.B. 12345A"
+            variant="outlined"
+            class="large-input mb-4"
+            prepend-icon="mdi-barcode"
+            clearable
+            @keyup.enter="useManualEntry"
+          ></v-text-field>
+
           <v-btn
             block
-            color="success"
-            :disabled="cameraActive"
-            @click="startCamera"
-            prepend-icon="mdi-camera"
-          >
-            Start Kamera
-          </v-btn>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-btn
-            block
-            color="error"
-            :disabled="!cameraActive"
-            @click="stopCamera"
-            prepend-icon="mdi-stop"
-          >
-            Stop
-          </v-btn>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-btn
-            block
+            size="x-large"
             color="primary"
-            :disabled="!cameraActive"
-            :loading="ocrProcessing"
-            @click="doOCR"
-            prepend-icon="mdi-camera-burst"
+            prepend-icon="mdi-check"
+            @click="useManualEntry"
+            :disabled="!manualKdNummer || !manualKdNummer.trim()"
           >
-            Photo Texterkennung
+            KD-Nummer übernehmen
           </v-btn>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-btn
-            block
-            color="warning"
-            :disabled="!cameraActive"
-            @click="toggleTorch"
-            prepend-icon="mdi-flashlight"
-          >
-            Blitzlicht an/aus
-          </v-btn>
-        </v-col>
-      </v-row>
-
-      <!-- Live OCR Toggle -->
-      <v-row dense class="mb-4">
-        <v-col cols="12">
-          <v-switch
-            v-model="liveOcrEnabled"
-            color="primary"
-            label="Video Texterkennung (alle 1.5s)"
-            :disabled="!cameraActive"
-            hide-details
-          ></v-switch>
-        </v-col>
-      </v-row>
-
-      <!-- OCR Result Text Area -->
-      <v-textarea
-        v-model="recognizedText"
-        label="Erkannter Text"
-        placeholder="Erkannter Text erscheint hier..."
-        rows="8"
-        readonly
-        variant="outlined"
-        class="mb-4"
-      ></v-textarea>
+        </v-window-item>
+      </v-window>
 
       <!-- Order Number Display -->
+      <v-divider class="my-4"></v-divider>
+
       <v-text-field
         v-model="orderNumber"
-        label="Zuletzt erkannte Nummer"
+        label="Erkannte KD-Nummer"
         readonly
         variant="outlined"
+        class="large-input mb-4"
         prepend-icon="mdi-barcode"
+        :color="orderNumber ? 'success' : ''"
       ></v-text-field>
+
+      <!-- Continue Button -->
+      <v-btn
+        block
+        size="x-large"
+        color="success"
+        prepend-icon="mdi-arrow-right"
+        @click="continueToLagerplatz"
+        :disabled="!orderNumber"
+      >
+        Weiter zur Lagerplatzvergabe
+      </v-btn>
 
       <!-- Status Messages -->
       <v-alert
@@ -116,13 +182,17 @@
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { createWorker } from 'tesseract.js'
 
+const emit = defineEmits(['kdNummerSelected'])
+
 // Refs
+const activeTab = ref('scan')
 const videoRef = ref(null)
 const cameraActive = ref(false)
 const ocrProcessing = ref(false)
 const liveOcrEnabled = ref(false)
 const recognizedText = ref('')
 const orderNumber = ref('')
+const manualKdNummer = ref('')
 const statusMessage = ref('')
 const statusType = ref('info')
 
@@ -401,6 +471,21 @@ watch(liveOcrEnabled, (newValue) => {
   }
 })
 
+// Use manual entry
+function useManualEntry() {
+  if (manualKdNummer.value && manualKdNummer.value.trim()) {
+    orderNumber.value = manualKdNummer.value.trim()
+    showStatus('KD-Nummer manuell übernommen: ' + orderNumber.value, 'success')
+  }
+}
+
+// Continue to Lagerplatz selection
+function continueToLagerplatz() {
+  if (orderNumber.value) {
+    emit('kdNummerSelected', orderNumber.value)
+  }
+}
+
 // Cleanup on component unmount
 onBeforeUnmount(() => {
   stopCamera()
@@ -425,5 +510,10 @@ onBeforeUnmount(() => {
   max-height: 40vh;
   display: block;
   background: #000;
+}
+
+.large-input :deep(.v-field__input) {
+  font-size: 1.3rem;
+  padding: 16px;
 }
 </style>

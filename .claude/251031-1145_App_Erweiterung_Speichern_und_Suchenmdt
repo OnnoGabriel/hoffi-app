@@ -1,0 +1,35 @@
+Baue die Vue App um und erweitere sie. Denke start über die folgenden Anweisungen nach und mache einen Plan für die Umsetzung bevor Du mit der Umsetzung startest.
+
+# Anwendungszweck
+
+Die App soll Mitarbeitern im Lager eines metallverarbeitenden Betriebs dazu dienen, Bauteile auf Paletten in einem Lager zu organisieren. Die Paletten werden angeliefert und enthalten verschiedene Bauteile. Jedes Bauteil hat einen Lieferschein, auf dem eine KD-Nummer steht, die für jedes Bauteil eindeutig ist. Außerdem steht die Anzahl der Bauteile auf dem Lieferschein.
+
+Der Mitarbeiter soll die KD-Nummern auf den Lieferscheinen mit der App auf dem Smartphone scannen (OCR) oder die KD-Nummer manuell eingeben, wenn der Scan nicht möglich ist. Dabei geht er pro Palette alle Lieferscheine durch und erfasst die KD-Nummern sowie die Anzahl der Bauteile. Anschließend wählt er einen Platz im Lager aus und gibt diesen in der App ein, die den Platz für alle Bauteile dauerhaft speichert.
+
+Das Lager besteht auf 6 Regalreihen mit jeweils 5 Fächern. In jedes Fach passen drei Paletten, wobei die Positionen mit "links", "mitte" und "rechts" bezeichnet werden. Der Platz einer Palette kann also zum Beispiel heißen: "Reihe 3, Fach 2, rechts".
+
+Wenn der Mitarbeiter später dann ein Bauteil sucht, gibt er die KD-Nummer des Bauteils in der App ein und die App zeigt ihm dann alle Plätze im Lager an, in denen Paletten mit diesem Bauteil stehen.
+
+Er entnimmt dann dem Lager ein oder mehrere Bauteile und checkt diese in der App aus.
+
+# Neue Struktur und Bedienung der App
+
+Füge eine Dashboard-Seite für den "Hoffi-Store" ein. Das Dashbord soll Buttons zu drei Bereichen der Anwendungen anzeigen:
+
+1. Bauteil erfassen (das ist die bisherige Komponente OCRCamera)
+
+2. Bauteil suchen
+
+Außerdem soll das Dashboard eine Info anzeigen, wie viele Bauteile bereits erfasst und in der Datenbank bereits gespeichert sind.
+
+Die Komponente "OCRCamera" ist ab jetzt nur ein Teil der Anwendung. Sie dient zur Erfassung der KD-Auftragsnummer, die per OCR erkannt wird oder (ab jetzt neu) manuell eingeben kann, wenn der Scan nicht funktionier. Nach Erfassung/Eingabe der Nummer soll eine neue Komponente starten, auf der der User einen Lagerplatz für die Palette mit den erfassten KD-Autragsnummern und der Anzahl der Bauteile auswählen kann. Die Lagerplatz der Bauteile soll dann dauerhaft in der App gespeichert werden.
+
+Die Speicherung der Bauteile in den Lagerplätze soll in einer browserinternen Datenbank erfolgen. Wähle eine Implementierung aus, die auf allen aktuellen Browsern auf Desktop-PC aber auch auf mobilen Geräten wie Smartphones und Tablets funktioniert. Die Speicherung muss persistent sein, beim Neustart des Browsers weiterhin vorhanden sein.
+
+Eine weitere Komponte in der App ist die Suche. Diese soll auch aus dem Dashboard erreichbar sein. In der Suche gibt der Mitarbiter eine KD-Nummer ein und die App zeigt dann sämtliche Bauteile im Lager sowie deren Plätze an.
+
+Wenn der Mitarbeiter ein oder mehrere Bauteile dem Lager entnimmt, sollen diese in der App ausgescheckt werden können, also in der Datenbank entfernt werden.
+
+# Bedienung
+
+Die App soll möglichst einfach zu bedienen sein. Alle Bedienelemente und Informationen müssen groß dargestellt werden. Es soll alles möglichst einfach und die UX die möglichst fehlerfreie Erfassung der Bauteile, deren Suche und deren Checkout ermöglichen.

@@ -8,10 +8,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.4.21",
-    "vuetify": "^3.5.10",
+    "@mdi/font": "^7.4.47",
+    "idb": "^8.0.3",
     "tesseract.js": "^5.0.4",
-    "@mdi/font": "^7.4.47"
+    "vue": "^3.4.21",
+    "vue-router": "^4.6.3",
+    "vuetify": "^3.5.10"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
