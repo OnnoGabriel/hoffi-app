@@ -3,12 +3,7 @@
     <v-card-title class="bg-success text-white d-flex align-center">
       <v-icon start>mdi-package-variant</v-icon>
       <span class="flex-grow-1">Lagerplatz zuweisen</span>
-      <v-btn
-        icon
-        variant="text"
-        @click="$emit('close')"
-        size="small"
-      >
+      <v-btn icon variant="text" @click="$emit('close')" size="small">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </v-card-title>
@@ -26,7 +21,7 @@
       <div class="mb-6">
         <label class="text-h6 mb-3 d-block">Anzahl der Bauteile</label>
         <v-row align="center" dense>
-          <v-col cols="3">
+          <v-col cols="3" class="text-right">
             <v-btn
               size="x-large"
               color="error"
@@ -48,12 +43,7 @@
             ></v-text-field>
           </v-col>
           <v-col cols="3">
-            <v-btn
-              size="x-large"
-              color="success"
-              icon
-              @click="increaseAnzahl"
-            >
+            <v-btn size="x-large" color="success" icon @click="increaseAnzahl">
               <v-icon size="x-large">mdi-plus</v-icon>
             </v-btn>
           </v-col>
@@ -153,87 +143,87 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { addBauteil } from '../services/database'
+import { ref, computed } from "vue";
+import { addBauteil } from "../services/database";
 
 const props = defineProps({
   kdNummer: {
     type: String,
-    required: true
-  }
-})
+    required: true,
+  },
+});
 
-const emit = defineEmits(['saved', 'cancel', 'close'])
+const emit = defineEmits(["saved", "cancel", "close"]);
 
 // Form state
-const anzahl = ref(1)
-const reihe = ref(1)
-const fach = ref(1)
-const position = ref('links')
-const saving = ref(false)
-const statusMessage = ref('')
-const statusType = ref('info')
+const anzahl = ref(1);
+const reihe = ref(1);
+const fach = ref(1);
+const position = ref("links");
+const saving = ref(false);
+const statusMessage = ref("");
+const statusType = ref("info");
 
 // Validation
 const isValid = computed(() => {
-  return anzahl.value > 0 && reihe.value && fach.value && position.value
-})
+  return anzahl.value > 0 && reihe.value && fach.value && position.value;
+});
 
 function increaseAnzahl() {
-  anzahl.value++
+  anzahl.value++;
 }
 
 function decreaseAnzahl() {
   if (anzahl.value > 1) {
-    anzahl.value--
+    anzahl.value--;
   }
 }
 
 async function save() {
   if (!isValid.value) {
-    showStatus('Bitte alle Felder ausfüllen', 'error')
-    return
+    showStatus("Bitte alle Felder ausfüllen", "error");
+    return;
   }
 
   try {
-    saving.value = true
+    saving.value = true;
 
     const bauteil = {
       kdNummer: props.kdNummer,
       anzahl: anzahl.value,
       reihe: reihe.value,
       fach: fach.value,
-      position: position.value
-    }
+      position: position.value,
+    };
 
-    await addBauteil(bauteil)
+    await addBauteil(bauteil);
 
-    showStatus('Bauteil erfolgreich gespeichert!', 'success')
+    showStatus("Bauteil erfolgreich gespeichert!", "success");
 
     // Emit saved event after short delay
     setTimeout(() => {
-      emit('saved', bauteil)
-    }, 1000)
+      emit("saved", bauteil);
+    }, 1000);
   } catch (error) {
-    console.error('Error saving bauteil:', error)
-    showStatus('Fehler beim Speichern: ' + error.message, 'error')
+    console.error("Error saving bauteil:", error);
+    showStatus("Fehler beim Speichern: " + error.message, "error");
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 function cancel() {
-  emit('cancel')
+  emit("cancel");
 }
 
-function showStatus(message, type = 'info') {
-  statusMessage.value = message
-  statusType.value = type
+function showStatus(message, type = "info") {
+  statusMessage.value = message;
+  statusType.value = type;
 
-  if (type === 'success' || type === 'info') {
+  if (type === "success" || type === "info") {
     setTimeout(() => {
-      statusMessage.value = ''
-    }, 3000)
+      statusMessage.value = "";
+    }, 3000);
   }
 }
 </script>
@@ -261,47 +251,47 @@ function showStatus(message, type = 'info') {
     font-size: 1.2rem;
     padding: 12px;
   }
-  
+
   .large-input :deep(.v-select__selection) {
     font-size: 1.2rem;
   }
-  
+
   /* Labels kleiner auf mobil */
   :deep(.text-h6) {
     font-size: 1.05rem !important;
   }
-  
+
   /* Plus/Minus Buttons kompakter */
   :deep(.v-btn[icon]) {
     width: 48px !important;
     height: 48px !important;
   }
-  
+
   :deep(.v-btn[icon] .v-icon) {
     font-size: 1.5rem !important;
   }
-  
+
   /* Position-Toggle-Buttons responsiver */
   :deep(.v-btn-toggle .v-btn) {
     font-size: 0.9rem !important;
     padding: 8px 12px !important;
   }
-  
+
   :deep(.v-btn-toggle .v-btn .v-icon) {
     font-size: 1rem !important;
     margin-right: 4px !important;
   }
-  
+
   /* Card-Padding reduzieren */
   :deep(.v-card-text.pa-6) {
     padding: 16px !important;
   }
-  
+
   /* Alert Info-Box */
   :deep(.v-alert .text-h6) {
     font-size: 1rem !important;
   }
-  
+
   /* Action Buttons */
   :deep(.v-btn[size="x-large"]) {
     height: 48px !important;
@@ -316,17 +306,17 @@ function showStatus(message, type = 'info') {
     font-size: 1.1rem;
     padding: 10px;
   }
-  
+
   .large-input :deep(.v-select__selection) {
     font-size: 1.1rem;
   }
-  
+
   /* Position-Buttons ohne Text-Umbruch */
   :deep(.v-btn-toggle .v-btn) {
     font-size: 0.8rem !important;
     padding: 6px 8px !important;
   }
-  
+
   /* Buttons noch kompakter */
   :deep(.v-btn[size="x-large"]) {
     height: 44px !important;

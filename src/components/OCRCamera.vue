@@ -3,12 +3,7 @@
     <v-card-title class="bg-primary text-white d-flex align-center">
       <v-icon start>mdi-barcode-scan</v-icon>
       <span class="flex-grow-1">KD-Nummer erfassen</span>
-      <v-btn
-        icon
-        variant="text"
-        @click="$emit('close')"
-        size="small"
-      >
+      <v-btn icon variant="text" @click="$emit('close')" size="small">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </v-card-title>
@@ -75,8 +70,31 @@
             rows="4"
             readonly
             variant="outlined"
-            class="mb-0"
+            class="mb-4"
           ></v-textarea>
+
+          <!-- Order Number Display (only in scan tab) -->
+          <v-text-field
+            v-model="orderNumber"
+            label="Erkannte KD-Nummer"
+            readonly
+            variant="outlined"
+            class="large-input mb-4"
+            prepend-icon="mdi-barcode"
+            :color="orderNumber ? 'success' : ''"
+          ></v-text-field>
+
+          <!-- Continue Button (only in scan tab) -->
+          <v-btn
+            block
+            size="x-large"
+            color="success"
+            prepend-icon="mdi-arrow-right"
+            @click="continueToLagerplatz"
+            :disabled="!orderNumber"
+          >
+            Lagerplatz wählen
+          </v-btn>
         </v-window-item>
 
         <!-- Manual Entry Tab -->
@@ -94,46 +112,23 @@
             class="large-input mb-4"
             prepend-icon="mdi-barcode"
             clearable
-            @keyup.enter="useManualEntry"
+            autofocus
+            @keyup.enter="isManualKdNummerValid ? continueWithManualEntry() : null"
           ></v-text-field>
 
+          <!-- Continue Button (manual tab) -->
           <v-btn
             block
             size="x-large"
-            color="primary"
-            prepend-icon="mdi-check"
-            @click="useManualEntry"
-            :disabled="!manualKdNummer || !manualKdNummer.trim()"
+            color="success"
+            prepend-icon="mdi-arrow-right"
+            @click="continueWithManualEntry"
+            :disabled="!isManualKdNummerValid"
           >
-            KD-Nummer übernehmen
+            Lagerplatz wählen
           </v-btn>
         </v-window-item>
       </v-window>
-
-      <!-- Order Number Display -->
-      <v-divider class="mb-4"></v-divider>
-
-      <v-text-field
-        v-model="orderNumber"
-        label="Erkannte KD-Nummer"
-        readonly
-        variant="outlined"
-        class="large-input mb-4"
-        prepend-icon="mdi-barcode"
-        :color="orderNumber ? 'success' : ''"
-      ></v-text-field>
-
-      <!-- Continue Button -->
-      <v-btn
-        block
-        size="x-large"
-        color="success"
-        prepend-icon="mdi-arrow-right"
-        @click="continueToLagerplatz"
-        :disabled="!orderNumber"
-      >
-        Lagerplatz wählen
-      </v-btn>
 
       <!-- Status Messages -->
       <v-alert
@@ -150,7 +145,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { createWorker } from "tesseract.js";
 
 const emit = defineEmits(["kdNummerSelected", "close"]);
@@ -165,6 +160,15 @@ const orderNumber = ref("");
 const manualKdNummer = ref("");
 const statusMessage = ref("");
 const statusType = ref("info");
+
+// Computed: Validate manual KD-Nummer (same rule as scan: at least one digit followed by a non-digit)
+const isManualKdNummerValid = computed(() => {
+  if (!manualKdNummer.value || !manualKdNummer.value.trim()) {
+    return false;
+  }
+  // Same validation as in analyzeText: /\d+\D/.test(part)
+  return /\d+\D/.test(manualKdNummer.value.trim());
+});
 
 // Internal state
 let stream = null;
@@ -458,15 +462,17 @@ function showStatus(message, type = "info") {
   }
 }
 
-// Use manual entry
-function useManualEntry() {
-  if (manualKdNummer.value && manualKdNummer.value.trim()) {
-    orderNumber.value = manualKdNummer.value.trim();
-    showStatus("KD-Nummer manuell übernommen: " + orderNumber.value, "success");
+// Continue with manual entry - validate and go to Lagerplatzauswahl
+function continueWithManualEntry() {
+  if (isManualKdNummerValid.value) {
+    const kdNummer = manualKdNummer.value.trim();
+    orderNumber.value = kdNummer;
+    showStatus("KD-Nummer übernommen: " + kdNummer, "success");
+    emit("kdNummerSelected", kdNummer);
   }
 }
 
-// Continue to Lagerplatz selection
+// Continue to Lagerplatz selection (for scan tab)
 function continueToLagerplatz() {
   if (orderNumber.value) {
     emit("kdNummerSelected", orderNumber.value);
