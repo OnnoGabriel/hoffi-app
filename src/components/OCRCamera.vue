@@ -33,31 +33,19 @@
 
           <!-- Control Buttons -->
           <v-row dense class="mb-4">
-            <v-col cols="12" sm="6">
+            <v-col>
               <v-btn
                 block
                 size="large"
-                color="success"
-                :disabled="cameraActive"
-                @click="startCamera"
+                :color="cameraActive ? 'error' : 'success'"
+                @click="toggleCamera"
                 prepend-icon="mdi-camera"
               >
-                Start Kamera
+                Kamera {{ cameraActive ? "Stop" : "Start" }}
               </v-btn>
             </v-col>
-            <v-col cols="12" sm="6">
-              <v-btn
-                block
-                size="large"
-                color="error"
-                :disabled="!cameraActive"
-                @click="stopCamera"
-                prepend-icon="mdi-stop"
-              >
-                Stop
-              </v-btn>
-            </v-col>
-            <v-col cols="12" sm="6">
+
+            <v-col>
               <v-btn
                 block
                 size="large"
@@ -66,7 +54,7 @@
                 @click="toggleTorch"
                 prepend-icon="mdi-flashlight"
               >
-                Blitzlicht an/aus
+                Blitzlicht
               </v-btn>
             </v-col>
           </v-row>
@@ -76,17 +64,18 @@
             v-model="recognizedText"
             label="Erkannter Text"
             placeholder="Erkannter Text erscheint hier..."
-            rows="6"
+            rows="4"
             readonly
             variant="outlined"
-            class="mb-4"
+            class="mb-0"
           ></v-textarea>
         </v-window-item>
 
         <!-- Manual Entry Tab -->
         <v-window-item value="manual">
           <v-alert type="info" variant="tonal" class="mb-4">
-            Geben Sie die KD-Nummer manuell ein, wenn der Scan nicht funktioniert.
+            Geben Sie die KD-Nummer manuell ein, wenn der Scan nicht
+            funktioniert.
           </v-alert>
 
           <v-text-field
@@ -114,7 +103,7 @@
       </v-window>
 
       <!-- Order Number Display -->
-      <v-divider class="my-4"></v-divider>
+      <v-divider class="mb-4"></v-divider>
 
       <v-text-field
         v-model="orderNumber"
@@ -135,7 +124,7 @@
         @click="continueToLagerplatz"
         :disabled="!orderNumber"
       >
-        Weiter zur Lagerplatzvergabe
+        Lagerplatz wählen
       </v-btn>
 
       <!-- Status Messages -->
@@ -153,34 +142,42 @@
 </template>
 
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue'
-import { createWorker } from 'tesseract.js'
+import { ref, watch, onBeforeUnmount } from "vue";
+import { createWorker } from "tesseract.js";
 
-const emit = defineEmits(['kdNummerSelected'])
+const emit = defineEmits(["kdNummerSelected"]);
 
 // Refs
-const activeTab = ref('scan')
-const videoRef = ref(null)
-const cameraActive = ref(false)
-const ocrProcessing = ref(false)
-const recognizedText = ref('')
-const orderNumber = ref('')
-const manualKdNummer = ref('')
-const statusMessage = ref('')
-const statusType = ref('info')
+const activeTab = ref("scan");
+const videoRef = ref(null);
+const cameraActive = ref(false);
+const ocrProcessing = ref(false);
+const recognizedText = ref("");
+const orderNumber = ref("");
+const manualKdNummer = ref("");
+const statusMessage = ref("");
+const statusType = ref("info");
 
 // Internal state
-let stream = null
-let track = null
-let liveInterval = null
-let usingTextDetector = false
-let textDetector = null
-let tesseractWorker = null
-let tesseractLoaded = false
+let stream = null;
+let track = null;
+let liveInterval = null;
+let usingTextDetector = false;
+let textDetector = null;
+let tesseractWorker = null;
+let tesseractLoaded = false;
 
 // Canvas for capturing frames
-const offCanvas = document.createElement('canvas')
-const offCtx = offCanvas.getContext('2d')
+const offCanvas = document.createElement("canvas");
+const offCtx = offCanvas.getContext("2d");
+
+function toggleCamera() {
+  if (cameraActive.value) {
+    stopCamera();
+  } else {
+    startCamera();
+  }
+}
 
 // Start Camera
 async function startCamera() {
@@ -189,194 +186,202 @@ async function startCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { exact: 'environment' },
-          width: { ideal: 1280 }
+          facingMode: { exact: "environment" },
+          width: { ideal: 1280 },
         },
-        audio: false
-      })
+        audio: false,
+      });
     } catch (err) {
       // Fallback without exact constraint
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', 
-          width: { ideal: 1280 } 
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
         },
-        audio: false
-      })
+        audio: false,
+      });
     }
 
     if (videoRef.value) {
-      videoRef.value.srcObject = stream
-      track = stream.getVideoTracks()[0]
-      cameraActive.value = true
+      videoRef.value.srcObject = stream;
+      track = stream.getVideoTracks()[0];
+      cameraActive.value = true;
 
       // Check for TextDetector API support
-      if ('TextDetector' in window) {
+      if ("TextDetector" in window) {
         try {
-          textDetector = new TextDetector()
-          usingTextDetector = true
-          console.log('TextDetector available - using native API')
-          showStatus('Kamera und Video-Texterkennung gestartet', 'success')
+          textDetector = new TextDetector();
+          usingTextDetector = true;
+          console.log("TextDetector available - using native API");
+          showStatus("Kamera und Video-Texterkennung gestartet", "success");
         } catch (e) {
-          usingTextDetector = false
-          showStatus('Kamera gestartet - Video-Texterkennung aktiv', 'success')
+          usingTextDetector = false;
+          showStatus("Kamera gestartet - Video-Texterkennung aktiv", "success");
         }
       } else {
-        usingTextDetector = false
-        showStatus('Kamera gestartet - Video-Texterkennung aktiv', 'success')
+        usingTextDetector = false;
+        showStatus("Kamera gestartet - Video-Texterkennung aktiv", "success");
       }
-      
+
       // Automatically start live OCR
-      startLiveOCR()
+      startLiveOCR();
     }
   } catch (error) {
-    console.error('Camera error:', error)
-    showStatus('Kamera-Zugriff fehlgeschlagen: ' + error.message, 'error')
+    console.error("Camera error:", error);
+    showStatus("Kamera-Zugriff fehlgeschlagen: " + error.message, "error");
   }
 }
 
 // Stop Camera
 function stopCamera() {
   // Stop live OCR first
-  stopLiveOCR()
-  
+  stopLiveOCR();
+
   if (stream) {
-    stream.getTracks().forEach(t => t.stop())
-    stream = null
-    track = null
+    stream.getTracks().forEach((t) => t.stop());
+    stream = null;
+    track = null;
   }
-  cameraActive.value = false
+  cameraActive.value = false;
   if (videoRef.value) {
-    videoRef.value.srcObject = null
+    videoRef.value.srcObject = null;
   }
-  
-  showStatus('Kamera und Video-Texterkennung gestoppt', 'info')
+
+  showStatus("Kamera und Video-Texterkennung gestoppt", "info");
 }
 
 // Capture Frame from Video
 function captureFrame() {
-  const video = videoRef.value
+  const video = videoRef.value;
   if (!video || !video.videoWidth || !video.videoHeight) {
-    return null
+    return null;
   }
 
-  const vw = video.videoWidth
-  const vh = video.videoHeight
-  const maxW = 1024
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const maxW = 1024;
 
-  let w = vw
-  let h = vh
+  let w = vw;
+  let h = vh;
   if (w > maxW) {
-    const ratio = maxW / w
-    w = maxW
-    h = Math.round(vh * ratio)
+    const ratio = maxW / w;
+    w = maxW;
+    h = Math.round(vh * ratio);
   }
 
-  offCanvas.width = w
-  offCanvas.height = h
-  offCtx.drawImage(video, 0, 0, w, h)
-  return offCanvas
+  offCanvas.width = w;
+  offCanvas.height = h;
+  offCtx.drawImage(video, 0, 0, w, h);
+  return offCanvas;
 }
 
 // Run Native TextDetector
 async function runTextDetector(canvas) {
-  if (!textDetector) return null
+  if (!textDetector) return null;
   try {
-    const bitmap = await createImageBitmap(canvas)
-    const results = await textDetector.detect(bitmap)
-    if (!results || results.length === 0) return null
-    
-    return results.map(r => r.rawValue).join('\n')
+    const bitmap = await createImageBitmap(canvas);
+    const results = await textDetector.detect(bitmap);
+    if (!results || results.length === 0) return null;
+
+    return results.map((r) => r.rawValue).join("\n");
   } catch (e) {
-    console.warn('TextDetector failed:', e)
-    return null
+    console.warn("TextDetector failed:", e);
+    return null;
   }
 }
 
 // Ensure Tesseract is loaded
 async function ensureTesseract() {
-  if (tesseractLoaded) return
+  if (tesseractLoaded) return;
 
   try {
-    tesseractWorker = await createWorker('deu', 1, {
-      logger: m => {
-        if (m.status === 'loading tesseract core' || m.status === 'initializing tesseract') {
-          showStatus(`Tesseract wird geladen... ${Math.round(m.progress * 100)}%`, 'info')
+    tesseractWorker = await createWorker("deu", 1, {
+      logger: (m) => {
+        if (
+          m.status === "loading tesseract core" ||
+          m.status === "initializing tesseract"
+        ) {
+          showStatus(
+            `Tesseract wird geladen... ${Math.round(m.progress * 100)}%`,
+            "info"
+          );
         }
-      }
-    })
-    tesseractLoaded = true
-    showStatus('Tesseract bereit', 'success')
+      },
+    });
+    tesseractLoaded = true;
+    showStatus("Tesseract bereit", "success");
   } catch (error) {
-    console.error('Tesseract initialization error:', error)
-    showStatus('Tesseract-Initialisierung fehlgeschlagen', 'error')
-    throw error
+    console.error("Tesseract initialization error:", error);
+    showStatus("Tesseract-Initialisierung fehlgeschlagen", "error");
+    throw error;
   }
 }
 
 // Run Tesseract OCR
 async function runTesseract(canvas) {
-  await ensureTesseract()
-  const dataUrl = canvas.toDataURL('image/png')
-  const { data: { text } } = await tesseractWorker.recognize(dataUrl)
-  return text
+  await ensureTesseract();
+  const dataUrl = canvas.toDataURL("image/png");
+  const {
+    data: { text },
+  } = await tesseractWorker.recognize(dataUrl);
+  return text;
 }
 
 // Perform OCR
 async function doOCR() {
-  if (!videoRef.value || !track) return
+  if (!videoRef.value || !track) return;
 
   try {
-    ocrProcessing.value = true
-    const canvas = captureFrame()
+    ocrProcessing.value = true;
+    const canvas = captureFrame();
     if (!canvas) {
-      showStatus('Fehler beim Erfassen des Frames', 'error')
-      return
+      showStatus("Fehler beim Erfassen des Frames", "error");
+      return;
     }
 
     // Try native TextDetector first
     if (usingTextDetector && textDetector) {
-      const text = await runTextDetector(canvas)
+      const text = await runTextDetector(canvas);
       if (text) {
-        analyzeText(text)
-        ocrProcessing.value = false
-        return
+        analyzeText(text);
+        ocrProcessing.value = false;
+        return;
       }
     }
 
     // Fallback to Tesseract
-    recognizedText.value = 'OCR läuft (Tesseract) — bitte warten...'
-    const text = await runTesseract(canvas)
-    
+    recognizedText.value = "OCR läuft (Tesseract) — bitte warten...";
+    const text = await runTesseract(canvas);
+
     if (text && text.trim()) {
-      analyzeText(text)
+      analyzeText(text);
     } else {
-      recognizedText.value = '[kein Text gefunden]'
-      showStatus('Kein Text erkannt', 'warning')
+      recognizedText.value = "[kein Text gefunden]";
+      showStatus("Kein Text erkannt", "warning");
     }
   } catch (error) {
-    console.error('OCR error:', error)
-    recognizedText.value = 'Fehler bei OCR: ' + (error.message || error)
-    showStatus('OCR-Fehler: ' + error.message, 'error')
+    console.error("OCR error:", error);
+    recognizedText.value = "Fehler bei OCR: " + (error.message || error);
+    showStatus("OCR-Fehler: " + error.message, "error");
   } finally {
-    ocrProcessing.value = false
+    ocrProcessing.value = false;
   }
 }
 
 // Analyze recognized text
 function analyzeText(text) {
-  recognizedText.value = text
+  recognizedText.value = text;
 
   // Extract order number from text
-  const lines = text.split('\n')
+  const lines = text.split("\n");
   for (const line of lines) {
-    if (line.includes('KD-Auftrag:')) {
-      const parts = line.split('KD-Auftrag:')[1].trim().split(' ')
-      const foundOrderNumber = parts.find(part => /\d+\D/.test(part))
+    if (line.includes("KD-Auftrag:")) {
+      const parts = line.split("KD-Auftrag:")[1].trim().split(" ");
+      const foundOrderNumber = parts.find((part) => /\d+\D/.test(part));
       if (foundOrderNumber) {
-        orderNumber.value = foundOrderNumber
-        showStatus('Auftragsnummer erkannt: ' + foundOrderNumber, 'success')
-        break
+        orderNumber.value = foundOrderNumber;
+        showStatus("Auftragsnummer erkannt: " + foundOrderNumber, "success");
+        break;
       }
     }
   }
@@ -384,87 +389,90 @@ function analyzeText(text) {
 
 // Start Live OCR
 function startLiveOCR() {
-  if (liveInterval) return
+  if (liveInterval) return;
   liveInterval = setInterval(() => {
-    const video = videoRef.value
-    if (!video || video.readyState < 2) return
-    doOCR().catch(console.error)
-  }, 1500)
+    const video = videoRef.value;
+    if (!video || video.readyState < 2) return;
+    doOCR().catch(console.error);
+  }, 1500);
 }
 
 // Stop Live OCR
 function stopLiveOCR() {
   if (liveInterval) {
-    clearInterval(liveInterval)
-    liveInterval = null
+    clearInterval(liveInterval);
+    liveInterval = null;
   }
 }
 
 // Toggle Torch/Flashlight
 async function toggleTorch() {
   if (!track) {
-    showStatus('Kamera nicht gestartet', 'warning')
-    return
+    showStatus("Kamera nicht gestartet", "warning");
+    return;
   }
 
-  const capabilities = track.getCapabilities ? track.getCapabilities() : {}
+  const capabilities = track.getCapabilities ? track.getCapabilities() : {};
   if (!capabilities.torch) {
-    showStatus('Blitzlicht wird vom Gerät/Browser nicht unterstützt', 'warning')
-    return
+    showStatus(
+      "Blitzlicht wird vom Gerät/Browser nicht unterstützt",
+      "warning"
+    );
+    return;
   }
 
-  const settings = track.getSettings()
-  const isOn = settings.torch === true
+  const settings = track.getSettings();
+  const isOn = settings.torch === true;
 
   try {
-    await track.applyConstraints({ 
-      advanced: [{ torch: !isOn }] 
-    })
-    showStatus(`Blitzlicht ${!isOn ? 'ein' : 'aus'}geschaltet`, 'success')
+    await track.applyConstraints({
+      advanced: [{ torch: !isOn }],
+    });
+    showStatus(`Blitzlicht ${!isOn ? "ein" : "aus"}geschaltet`, "success");
   } catch (error) {
-    console.warn('Torch error:', error)
-    showStatus('Blitzlicht konnte nicht umgeschaltet werden', 'error')
+    console.warn("Torch error:", error);
+    showStatus("Blitzlicht konnte nicht umgeschaltet werden", "error");
   }
 }
 
 // Show status message
-function showStatus(message, type = 'info') {
-  statusMessage.value = message
-  statusType.value = type
-  
+function showStatus(message, type = "info") {
+  statusMessage.value = message;
+  statusType.value = type;
+
   // Auto-clear success/info messages after 3 seconds
-  if (type === 'success' || type === 'info') {
+  if (type === "success" || type === "info") {
     setTimeout(() => {
       if (statusMessage.value === message) {
-        statusMessage.value = ''
+        statusMessage.value = "";
       }
-    }, 3000)
+    }, 3000);
   }
 }
 
 // Use manual entry
 function useManualEntry() {
   if (manualKdNummer.value && manualKdNummer.value.trim()) {
-    orderNumber.value = manualKdNummer.value.trim()
-    showStatus('KD-Nummer manuell übernommen: ' + orderNumber.value, 'success')
+    orderNumber.value = manualKdNummer.value.trim();
+    showStatus("KD-Nummer manuell übernommen: " + orderNumber.value, "success");
   }
 }
 
 // Continue to Lagerplatz selection
 function continueToLagerplatz() {
   if (orderNumber.value) {
-    emit('kdNummerSelected', orderNumber.value)
+    emit("kdNummerSelected", orderNumber.value);
   }
 }
 
 // Cleanup on component unmount
 onBeforeUnmount(() => {
-  stopCamera()
-  stopLiveOCR()
+  stopCamera();
+  stopLiveOCR();
   if (tesseractWorker) {
-    tesseractWorker.terminate()
+    tesseractWorker.terminate();
   }
-})
+});
 </script>
 
 <style scoped>
@@ -494,75 +502,75 @@ onBeforeUnmount(() => {
   .video-element {
     max-height: 50vh;
   }
-  
+
   /* Tabs kompakter */
   :deep(.v-tabs) {
     font-size: 0.9rem;
   }
-  
+
   :deep(.v-tab) {
     font-size: 0.9rem !important;
     padding: 8px 12px !important;
     min-width: auto !important;
   }
-  
+
   :deep(.v-tab .v-icon) {
     font-size: 1.1rem !important;
   }
-  
+
   /* Buttons kompakter */
   :deep(.v-btn[size="large"]) {
     height: 44px !important;
     font-size: 0.9rem !important;
     padding: 0 12px !important;
   }
-  
+
   :deep(.v-btn[size="x-large"]) {
     height: 48px !important;
     font-size: 1rem !important;
   }
-  
+
   /* Button Icons kleiner */
   :deep(.v-btn .v-icon) {
     font-size: 1.1rem !important;
   }
-  
+
   /* Eingabefelder */
   .large-input :deep(.v-field__input) {
     font-size: 1.1rem;
     padding: 12px;
   }
-  
+
   /* Textarea kompakter */
   :deep(.v-textarea) {
     font-size: 0.95rem;
   }
-  
+
   /* Switch kompakter */
   :deep(.v-switch) {
     font-size: 0.9rem;
   }
-  
+
   :deep(.v-switch .v-label) {
     font-size: 0.9rem !important;
   }
-  
+
   /* Alert-Boxen */
   :deep(.v-alert) {
     font-size: 0.9rem;
   }
-  
+
   /* Card Padding reduzieren */
   :deep(.v-card-text.pa-4) {
     padding: 12px !important;
   }
-  
+
   /* Card Title */
   :deep(.v-card-title) {
     font-size: 1.1rem !important;
     padding: 12px 16px !important;
   }
-  
+
   :deep(.v-card-title .v-icon) {
     font-size: 1.3rem !important;
   }
@@ -574,24 +582,24 @@ onBeforeUnmount(() => {
   .video-element {
     max-height: 55vh;
   }
-  
+
   /* Buttons noch kompakter */
   :deep(.v-btn[size="large"]) {
     height: 40px !important;
     font-size: 0.85rem !important;
   }
-  
+
   :deep(.v-btn[size="x-large"]) {
     height: 44px !important;
     font-size: 0.95rem !important;
   }
-  
+
   /* Tab-Text eventuell kürzen durch kleinere Schrift */
   :deep(.v-tab) {
     font-size: 0.85rem !important;
     padding: 6px 8px !important;
   }
-  
+
   /* Eingabefelder kleiner */
   .large-input :deep(.v-field__input) {
     font-size: 1rem;
