@@ -3,11 +3,14 @@
     <v-main>
       <router-view />
     </v-main>
+
+    <!-- PWA Install Prompt -->
+    <PwaInstallPrompt />
   </v-app>
 </template>
 
 <script setup>
-// Router view will handle component rendering
+import PwaInstallPrompt from './components/PwaInstallPrompt.vue'
 </script>
 
 <style>

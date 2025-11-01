@@ -4,9 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Mobile-first Vue 3 application for camera-based OCR (Optical Character Recognition) designed for extracting text and order numbers from camera images in real-time. Uses dual OCR engine strategy: native TextDetector API with Tesseract.js fallback.
+**Hoffi-Store** is a Progressive Web App (PWA) for warehouse management in metal processing facilities. The app enables workers to organize components on pallets using OCR-based scanning of delivery notes (KD-Numbers) or manual entry. Built with Vue 3, Vuetify, Vue Router, and IndexedDB for offline-capable persistent storage.
 
-**Current Branch**: `vue3` (main development)
+**Key Features:**
+- OCR scanning for KD-Numbers (dual engine: TextDetector API + Tesseract.js)
+- Manual KD-Number entry fallback
+- Warehouse location assignment (6 rows, 5 shelves, 3 positions per shelf)
+- Search and filter by KD-Number
+- Component checkout system
+- Persistent local storage (IndexedDB)
+- Installable as PWA on mobile devices
+
+**Current Branch**: `add-store-functions`
 **Main Branch**: `main`
 
 ## Common Commands
@@ -25,13 +34,28 @@ npm install
 
 ## Architecture
 
-### Single-Component Application
+### Multi-Page Application Structure
 
-This is a minimal Vue 3 app with a single-page architecture:
-- **App.vue**: Root component (simple Vuetify container wrapper)
-- **OCRCamera.vue**: All core functionality in one component (~430 lines)
-- **vuetify.js**: Material Design theme configuration
-- **main.js**: Minimal Vue app initialization with Vuetify plugin
+```
+src/
+├── components/
+│   ├── OCRCamera.vue          - OCR scanning + manual entry (tabs)
+│   ├── LagerplatzAuswahl.vue  - Warehouse location selection
+│   ├── BauteilSuche.vue       - Search/filter/checkout interface
+│   └── PwaInstallPrompt.vue   - PWA installation prompt
+├── views/
+│   ├── Dashboard.vue          - Home with statistics and navigation
+│   ├── ErfassenView.vue       - Capture workflow (OCR → location)
+│   └── SuchenView.vue         - Search/checkout view
+├── services/
+│   └── database.js            - IndexedDB operations (idb wrapper)
+├── router/
+│   └── index.js               - Vue Router configuration
+├── plugins/
+│   └── vuetify.js             - Material Design theme
+├── App.vue                    - Root component with router-view
+└── main.js                    - App initialization
+```
 
 ### Dual OCR Engine Strategy
 
@@ -69,10 +93,43 @@ Critical cleanup pattern in `onBeforeUnmount()`:
 
 ### Order Number Extraction
 
-Business logic (src/components/OCRCamera.vue:316-333):
+Business logic (src/components/OCRCamera.vue):
 - Searches recognized text for lines containing "KD-Auftrag:"
 - Extracts first token matching pattern `\d+\D` (digits followed by non-digit)
 - Updates `orderNumber` ref separately from full OCR result
+- Emits `kdNummerSelected` event to parent component
+- Supports manual entry as fallback (tab navigation)
+
+### Data Persistence (IndexedDB)
+
+**Database:** `hoffi-store-db`
+**Object Store:** `bauteile`
+
+**Schema:**
+```javascript
+{
+  id: number (auto-increment),
+  kdNummer: string,
+  anzahl: number,
+  reihe: number (1-6),
+  fach: number (1-5),
+  position: string ('links' | 'mitte' | 'rechts'),
+  erfasstAm: timestamp
+}
+```
+
+**Indexes:**
+- `kdNummer` (non-unique) - for fast searches
+- `erfasstAm` (non-unique) - for sorting by creation date
+
+**Service Functions** (src/services/database.js):
+- `addBauteil(bauteil)` - Add new component
+- `getAllBauteile()` - Get all components
+- `getBauteileByKdNummer(kdNummer)` - Search by KD-Number
+- `getBauteileCount()` - Total component count (summed)
+- `getUniqueEntriesCount()` - Number of database entries
+- `updateBauteilAnzahl(id, neueAnzahl)` - Update/delete on checkout
+- `clearAllBauteile()` - Reset database (dev/testing)
 
 ### Frame Capture Optimization
 
@@ -90,12 +147,42 @@ Continuous recognition implemented via interval:
 - Interval stored in `liveInterval` for cleanup
 - Automatically stopped on camera stop or component unmount
 
-## HTTPS Requirement
+## PWA Configuration
 
-Camera access requires HTTPS on mobile devices:
+### Progressive Web App Features
+
+The app is configured as a PWA using `vite-plugin-pwa`:
+
+**Manifest** (auto-generated at build):
+- Name: "Hoffi-Store Lagerverwaltung"
+- Theme color: #1976D2 (primary blue)
+- Display mode: standalone
+- Orientation: portrait
+- Icons: SVG with maskable variant
+
+**Service Worker** (Workbox):
+- Auto-update strategy
+- Precaches all static assets (JS, CSS, HTML, fonts)
+- Runtime caching for Tesseract.js CDN resources
+- Offline-capable after first load
+
+**Installation:**
+- `PwaInstallPrompt.vue` component shows install banner after 3 seconds
+- User can dismiss (saved to localStorage)
+- Works on Android, iOS, and desktop Chrome/Edge
+
+**Icons:**
+- `/public/icons/icon.svg` - Standard app icon (512x512)
+- `/public/icons/icon-maskable.svg` - Maskable icon for Android
+- `/public/favicon.svg` - Browser favicon
+
+### HTTPS Requirement
+
+Camera access and PWA installation require HTTPS on mobile devices:
 - Dev server configured with `host: true` for network access
-- Uncomment `https: true` in vite.config.js:15 for HTTPS
+- Uncomment `https: true` in vite.config.js for HTTPS in development
 - Localhost exempt from HTTPS requirement
+- Production deployment must use HTTPS
 
 ## Vuetify Configuration
 
@@ -109,10 +196,51 @@ All Vuetify components available without explicit imports. Theme customization i
 ## Key Technical Constraints
 
 - **German Language**: Tesseract configured for `deu` language model
-- **Mobile-First**: UI optimized for mobile viewport, responsive grid
+- **Mobile-First**: UI optimized for mobile viewport with large touch targets
 - **Video Constraints**: Ideal width 1280px for quality/performance balance
 - **Frame Processing**: Max 1024px width to optimize OCR speed
 - **Live OCR Interval**: 1500ms balances responsiveness vs CPU usage
+- **Warehouse Structure**: Fixed 6 rows × 5 shelves × 3 positions (108 total locations)
+- **UI Standards**: Minimum button height 80-100px, font size 1.3-1.5rem for inputs
+
+## User Workflows
+
+### 1. Capture Workflow (Dashboard → Erfassen)
+
+1. User clicks "Bauteil erfassen" on dashboard
+2. **OCRCamera component** displays:
+   - Tab 1: Camera scanning with OCR
+   - Tab 2: Manual KD-Number entry
+3. User scans or enters KD-Number
+4. Click "Weiter zur Lagerplatzvergabe"
+5. **LagerplatzAuswahl component** shows:
+   - Confirmed KD-Number display
+   - Quantity input (+/- buttons)
+   - Warehouse location selectors (Row, Shelf, Position)
+6. Click "Speichern" → Saves to IndexedDB
+7. Success dialog with options:
+   - "Weiteres Bauteil erfassen" (reset to step 2)
+   - "Zurück zum Dashboard"
+
+### 2. Search/Checkout Workflow (Dashboard → Suchen)
+
+1. User clicks "Bauteil suchen" on dashboard
+2. **BauteilSuche component** displays:
+   - All warehouse locations grouped and sorted
+   - Each location shows all components (KD-Numbers + quantities)
+3. User enters KD-Number in filter → Live filtering
+4. Expand location to see components
+5. Click "Checkout" on component:
+   - Dialog shows available quantity
+   - User selects quantity to remove (+/- buttons or "Alle entnehmen")
+   - Confirm → Updates database (reduces quantity or deletes entry)
+6. List auto-refreshes after checkout
+
+### 3. Dashboard Statistics
+
+- **Bauteile gesamt**: Sum of all `anzahl` values across all entries
+- **Lagerplätze belegt**: Count of unique database entries
+- Auto-updates when returning from other views
 
 ## Important Implementation Details
 

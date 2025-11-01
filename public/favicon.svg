@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" fill="#1976D2" rx="6"/>
+  <g fill="#FFFFFF">
+    <!-- Simplified warehouse -->
+    <path d="M 16 6 L 8 10 L 8 12 L 24 12 L 24 10 Z"/>
+    <rect x="8" y="12" width="16" height="14"/>
+    <!-- Shelves -->
+    <rect x="10" y="14" width="4" height="4" fill="#1976D2" opacity="0.5"/>
+    <rect x="10" y="19" width="4" height="4" fill="#1976D2" opacity="0.5"/>
+    <rect x="18" y="14" width="4" height="4" fill="#1976D2" opacity="0.5"/>
+    <rect x="18" y="19" width="4" height="4" fill="#1976D2" opacity="0.5"/>
+    <!-- Door -->
+    <rect x="14" y="21" width="4" height="5" fill="#1565C0"/>
+  </g>
+</svg>
