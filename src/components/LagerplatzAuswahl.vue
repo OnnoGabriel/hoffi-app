@@ -1,8 +1,16 @@
 <template>
   <v-card elevation="2">
-    <v-card-title class="bg-success text-white">
+    <v-card-title class="bg-success text-white d-flex align-center">
       <v-icon start>mdi-package-variant</v-icon>
-      Lagerplatz zuweisen
+      <span class="flex-grow-1">Lagerplatz zuweisen</span>
+      <v-btn
+        icon
+        variant="text"
+        @click="$emit('close')"
+        size="small"
+      >
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
     </v-card-title>
 
     <v-card-text class="pa-6">
@@ -155,7 +163,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['saved', 'cancel'])
+const emit = defineEmits(['saved', 'cancel', 'close'])
 
 // Form state
 const anzahl = ref(1)

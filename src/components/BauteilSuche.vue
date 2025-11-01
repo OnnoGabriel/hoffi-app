@@ -1,8 +1,16 @@
 <template>
   <v-card elevation="2">
-    <v-card-title class="bg-primary text-white">
+    <v-card-title class="bg-primary text-white d-flex align-center">
       <v-icon start>mdi-magnify</v-icon>
-      Bauteil suchen
+      <span class="flex-grow-1">Bauteil suchen</span>
+      <v-btn
+        icon
+        variant="text"
+        @click="$emit('close')"
+        size="small"
+      >
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
     </v-card-title>
 
     <v-card-text class="pa-6">
@@ -218,6 +226,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getAllBauteile, updateBauteilAnzahl } from '../services/database'
+
+const emit = defineEmits(['close'])
 
 // State
 const searchFilter = ref('')

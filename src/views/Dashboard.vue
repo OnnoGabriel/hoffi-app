@@ -3,8 +3,10 @@
     <v-row justify="center">
       <v-col cols="12" md="10" lg="8">
         <!-- Header -->
-        <v-card elevation="3" class="mb-10">
-          <v-card-title class="text-h4 bg-primary text-white pa-6 text-center">
+        <v-card elevation="0" class="mb-10">
+          <v-card-title
+            class="text-h4 bg-blue-grey-lighten-4 text-black pa-6 text-center"
+          >
             <v-icon size="x-large" class="mr-3">mdi-warehouse</v-icon>
             Hoffi-Store
           </v-card-title>
@@ -40,8 +42,10 @@
         </v-row>
 
         <!-- Statistics Card -->
-        <v-card elevation="2" class="mt-6 mb-6">
-          <v-card-title class="text-h5 bg-blue-grey-lighten-4">
+        <v-card elevation="0" class="mt-6 mb-6">
+          <v-card-title
+            class="text-h5 bg-blue-grey-lighten-4 text-black text-center"
+          >
             <v-icon class="mr-2">mdi-chart-box</v-icon>
             Lagerbestand
           </v-card-title>
@@ -119,35 +123,35 @@ onMounted(() => {
     min-height: 80px !important;
     font-size: 1.1rem !important;
   }
-  
+
   .action-button .v-btn__content {
     font-size: 1.1rem;
   }
-  
+
   /* Kleinere Schriftgrößen für mobile Geräte */
   .action-button :deep(.text-h5) {
     font-size: 1.1rem !important;
   }
-  
+
   /* Header Icon und Text kleiner auf mobil */
   :deep(.v-card-title.text-h4) {
     font-size: 1.5rem !important;
     padding: 16px !important;
   }
-  
+
   :deep(.v-card-title .v-icon) {
     font-size: 2rem !important;
   }
-  
+
   /* Statistik-Zahlen kleiner auf mobil */
   :deep(.text-h3) {
     font-size: 2rem !important;
   }
-  
+
   :deep(.text-h6) {
     font-size: 1rem !important;
   }
-  
+
   /* Weniger Padding auf mobil */
   :deep(.v-card-text.pa-6) {
     padding: 16px !important;

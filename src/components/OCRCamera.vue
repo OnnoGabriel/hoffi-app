@@ -1,8 +1,16 @@
 <template>
   <v-card elevation="2">
-    <v-card-title class="bg-primary text-white">
+    <v-card-title class="bg-primary text-white d-flex align-center">
       <v-icon start>mdi-barcode-scan</v-icon>
-      KD-Nummer erfassen
+      <span class="flex-grow-1">KD-Nummer erfassen</span>
+      <v-btn
+        icon
+        variant="text"
+        @click="$emit('close')"
+        size="small"
+      >
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
     </v-card-title>
 
     <v-card-text class="pa-4">
@@ -145,7 +153,7 @@
 import { ref, watch, onBeforeUnmount } from "vue";
 import { createWorker } from "tesseract.js";
 
-const emit = defineEmits(["kdNummerSelected"]);
+const emit = defineEmits(["kdNummerSelected", "close"]);
 
 // Refs
 const activeTab = ref("scan");

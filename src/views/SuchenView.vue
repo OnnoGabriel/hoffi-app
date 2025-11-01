@@ -2,19 +2,8 @@
   <v-container fluid class="pa-4">
     <v-row justify="center">
       <v-col cols="12" md="10" lg="8">
-        <!-- Back Button -->
-        <v-btn
-          color="primary"
-          variant="outlined"
-          prepend-icon="mdi-arrow-left"
-          class="mb-4"
-          @click="goBack"
-        >
-          Zurück zum Dashboard
-        </v-btn>
-
         <!-- Search Component -->
-        <BauteilSuche />
+        <BauteilSuche @close="goBack" />
       </v-col>
     </v-row>
   </v-container>
