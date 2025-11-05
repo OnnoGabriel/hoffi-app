@@ -1,66 +1,68 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vuetify from 'vite-plugin-vuetify'
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import vuetify from "vite-plugin-vuetify";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  base: "hoffi-store",
   plugins: [
     vue(),
     vuetify({ autoImport: true }),
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.svg'],
+      registerType: "autoUpdate",
+      includeAssets: ["favicon.svg", "icons/*.svg"],
       manifest: {
-        name: 'Hoffi-Store Lagerverwaltung',
-        short_name: 'Hoffi-Store',
-        description: 'Lagerverwaltungssystem für metallverarbeitende Betriebe mit OCR-Unterstützung',
-        theme_color: '#1976D2',
-        background_color: '#FFFFFF',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        name: "Hoffi-Store Lagerverwaltung",
+        short_name: "Hoffi-Store",
+        description:
+          "Lagerverwaltungssystem für metallverarbeitende Betriebe mit OCR-Unterstützung",
+        theme_color: "#1976D2",
+        background_color: "#FFFFFF",
+        display: "standalone",
+        orientation: "portrait",
+        scope: "/",
+        start_url: "/",
         icons: [
           {
-            src: '/icons/icon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any'
+            src: "/icons/icon.svg",
+            sizes: "512x512",
+            type: "image/svg+xml",
+            purpose: "any",
           },
           {
-            src: '/icons/icon-maskable.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'maskable'
-          }
+            src: "/icons/icon-maskable.svg",
+            sizes: "512x512",
+            type: "image/svg+xml",
+            purpose: "maskable",
+          },
         ],
-        categories: ['business', 'productivity', 'utilities'],
-        screenshots: []
+        categories: ["business", "productivity", "utilities"],
+        screenshots: [],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff,woff2}'],
+        globPatterns: ["**/*.{js,css,html,svg,png,woff,woff2}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
-            handler: 'CacheFirst',
+            handler: "CacheFirst",
             options: {
-              cacheName: 'tesseract-cache',
+              cacheName: "tesseract-cache",
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
               cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
       devOptions: {
         enabled: true,
-        type: 'module'
-      }
-    })
+        type: "module",
+      },
+    }),
   ],
   server: {
     port: 3000,
@@ -68,5 +70,5 @@ export default defineConfig({
     // Note: HTTPS is recommended for camera access on mobile devices
     // Uncomment the line below to enable HTTPS (requires certificate):
     // https: true
-  }
-})
+  },
+});
