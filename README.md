@@ -13,12 +13,14 @@ A Vue 3 application using Vuetify for camera-based OCR (Optical Character Recogn
 - 📋 **Order Number Extraction**: Automatically extract order numbers from "KD-Auftrag:" labels
 - 📱 **Mobile-First**: Optimized for mobile devices with responsive UI
 - 🌍 **German Language**: UI and OCR optimized for German text
+- 🚀 **PWA Support**: Installable app with offline capabilities and service worker caching
 
 ## Tech Stack
 
 - **Vue 3** (v3.4.21) - Progressive JavaScript framework with Composition API
 - **Vuetify 3** (v3.5.10) - Material Design component framework
 - **Vite** (v5.1.6) - Next-generation frontend build tool
+- **vite-plugin-pwa** - PWA plugin with service worker and manifest generation
 - **Tesseract.js** (v5.0.4) - JavaScript OCR library with German language support
 - **TextDetector API** - Native browser text detection (when available)
 - **@mdi/font** - Material Design Icons
@@ -85,22 +87,122 @@ The production build will be output to the `dist/` directory.
 $ npm run build && git subtree push --prefix dist origin gh-pages
 ```
 
+> 📖 **For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
+
+## PWA (Progressive Web App)
+
+This application is a fully functional Progressive Web App that can be installed on mobile devices and desktops.
+
+> 📖 **For detailed PWA implementation documentation, see [PWA.md](PWA.md)**
+
+### PWA Features
+
+- **Installable**: Add to home screen on mobile devices or install as desktop app
+- **Offline Support**: Service worker caches assets for offline functionality
+- **Auto-Update**: Automatically updates when new versions are deployed
+- **App-Like Experience**: Runs in standalone mode without browser UI
+- **Fast Loading**: Cached resources load instantly
+
+### Installing the PWA
+
+#### On Mobile (iOS/Android)
+
+1. Open the app in your mobile browser (Safari on iOS, Chrome on Android)
+2. Look for the "Add to Home Screen" or "Install" prompt
+3. **iOS Safari**: Tap the Share button → "Add to Home Screen"
+4. **Android Chrome**: Tap the menu → "Add to Home Screen" or "Install App"
+5. The app icon will appear on your home screen
+
+#### On Desktop (Chrome/Edge)
+
+1. Open the app in Chrome or Edge browser
+2. Look for the install icon (⊕) in the address bar
+3. Click "Install" in the prompt
+4. The app will open in its own window
+
+### PWA Configuration
+
+The PWA is configured in `vite.config.js` with the following settings:
+
+- **Auto-Update**: Service worker updates automatically on new deployments
+- **Offline Caching**: All static assets (JS, CSS, HTML, images) are cached
+- **CDN Caching**: External resources (fonts, libraries) are cached for 1 year
+- **Dev Mode**: PWA features enabled in development for testing
+
+### PWA Icons
+
+PWA icons are generated from `public/favicon.svg`. To regenerate icons:
+
+```bash
+./generate-pwa-icons.sh
+```
+
+This creates:
+- `pwa-192x192.png` - Standard icon (192x192)
+- `pwa-512x512.png` - Standard icon (512x512)
+- `pwa-maskable-192x192.png` - Maskable icon with safe zone (192x192)
+- `pwa-maskable-512x512.png` - Maskable icon with safe zone (512x512)
+
+**Requirements**: ImageMagick must be installed to generate icons.
+
+### Testing PWA Locally
+
+The PWA features are enabled in development mode:
+
+1. Start the dev server: `npm run dev`
+2. Open `http://localhost:3000` in your browser
+3. Check the browser console for PWA registration messages
+4. Use browser DevTools → Application → Service Workers to inspect
+
+### Testing PWA on GitHub Pages
+
+After deploying to GitHub Pages:
+
+1. Visit your GitHub Pages URL (e.g., `https://yourusername.github.io/hoffi-app/`)
+2. The service worker will register automatically
+3. Check browser DevTools → Application → Manifest to verify PWA configuration
+4. Test the install prompt on mobile or desktop
+
+### PWA Manifest
+
+The manifest is auto-generated with these settings:
+
+- **Name**: Hoffi-App Lagerverwaltung
+- **Short Name**: Hoffi-App
+- **Theme Color**: #1976D2 (Blue)
+- **Display Mode**: Standalone
+- **Orientation**: Portrait (optimized for mobile)
+- **Start URL**: `/hoffi-app/` (GitHub Pages compatible)
+
 ## Project Structure
 
 ```
 hoffi-app/
+├── public/
+│   ├── favicon.svg                  # App icon (SVG)
+│   ├── pwa-192x192.png              # PWA icon 192x192
+│   ├── pwa-512x512.png              # PWA icon 512x512
+│   ├── pwa-maskable-192x192.png     # PWA maskable icon 192x192
+│   └── pwa-maskable-512x512.png     # PWA maskable icon 512x512
 ├── src/
 │   ├── components/
-│   │   └── OCRCamera.vue      # Main OCR camera component
+│   │   └── OCRCamera.vue            # Main OCR camera component
 │   ├── plugins/
-│   │   └── vuetify.js         # Vuetify configuration
-│   ├── App.vue                # Root application component
-│   └── main.js                # Application entry point
-├── index.html                 # HTML entry point (Vue 3 version)
-├── index-original.html        # Original vanilla JS implementation
-├── vite.config.js             # Vite configuration
-├── package.json               # Dependencies and scripts
-└── README.md                  # This file
+│   │   └── vuetify.js               # Vuetify configuration
+│   ├── App.vue                      # Root application component
+│   └── main.js                      # Application entry point + PWA registration
+├── index.html                       # HTML entry point with PWA meta tags
+├── index-original.html              # Original vanilla JS implementation
+├── vite.config.js                   # Vite + PWA configuration
+├── generate-pwa-icons.sh            # Script to generate PWA icons
+├── package.json                     # Dependencies and scripts
+├── README.md                        # This file
+├── PWA.md                           # Detailed PWA implementation guide
+├── PWA-INSTALLATION.md              # German PWA installation guide for users
+├── PWA-CHECKLIST.md                 # Complete testing checklist
+├── PWA-IMPLEMENTATION-SUMMARY.md    # Implementation summary
+├── DEPLOYMENT.md                    # Deployment instructions
+└── QUICK-START.md                   # Quick reference guide
 ```
 
 ## Usage
@@ -227,6 +329,22 @@ The application automatically selects the best available OCR engine and displays
 - Ensure text is in focus
 - Try different angles or distances
 - German language model works best with German text
+
+### PWA Not Installing
+
+- Ensure you're using HTTPS (required for service workers, except on localhost)
+- Check that all PWA icons exist in the `public/` directory
+- Verify the manifest is being served correctly (DevTools → Application → Manifest)
+- Clear browser cache and reload the page
+- On iOS, PWA installation only works in Safari (not Chrome or Firefox)
+
+### Service Worker Issues
+
+- Check browser console for service worker registration errors
+- Use DevTools → Application → Service Workers to inspect status
+- Try unregistering the service worker and reloading
+- Ensure the app is served over HTTPS (GitHub Pages provides this automatically)
+- Clear site data and cache if experiencing update issues
 
 ## Configuration
 
